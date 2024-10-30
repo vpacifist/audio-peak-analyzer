@@ -13,6 +13,12 @@ AudioSegment.converter = ffmpeg_path
 # Добавляем путь в переменные окружения (на всякий случай)
 os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 
+# Проверка работы ffmpeg
+try:
+    ffmpeg.input('test.mp3').output('test_output.wav').run()
+except ffmpeg.Error as e:
+    print('FFmpeg error:', e)
+
 class AudioPeakAnalyzer:
     def __init__(self, master):
         self.master = master
