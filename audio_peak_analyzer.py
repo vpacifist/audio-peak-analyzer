@@ -63,62 +63,61 @@ class AudioPeakAnalyzer:
 
     def analyze(self):
         print("Функция analyze() запущена", flush=True)
+        try:
+            # Открываем диалоговое окно для выбора нескольких файлов
+            file_paths = filedialog.askopenfilenames(filetypes=[("Audio Files", "*.mp3 *.wav *.flac *.ogg")])
 
-        # Открываем диалоговое окно для выбора нескольких файлов
-        file_paths = filedialog.askopenfilenames(filetypes=[("Audio Files", "*.mp3 *.wav *.flac *.ogg")])
+            if not file_paths:
+                return  # Если файлы не выбраны, выходим
 
-        if not file_paths:
-            # Останавливаем прогресс-бар, если файлы не были выбраны
-            self.progress.stop()
-            return  # Если файлы не выбраны, выходим
+            # Очищаем текстовое поле с результатами
+            self.result_text.delete(1.0, END)
+            
+            # Проходим по каждому выбранному файлу и выполняем анализ
+            for file_path in file_paths:
+                try:
+                    # Загружаем аудиофайл с помощью pydub
+                    audio = AudioSegment.from_file(file_path)
+                    samples = np.array(audio.get_array_of_samples())
 
-        # Очищаем текстовое поле с результатами
-        self.result_text.delete(1.0, END)
-        
-        # Проходим по каждому выбранному файлу и выполняем анализ
-        for file_path in file_paths:
-            try:
-                # Загружаем аудиофайл с помощью pydub
-                audio = AudioSegment.from_file(file_path)
-                samples = np.array(audio.get_array_of_samples())
+                    # Для стерео разделяем каналы и находим максимальное значение в обоих каналах
+                    if audio.channels == 2:
+                        left_channel = samples[::2]  # Чётные индексы - левый канал
+                        right_channel = samples[1::2]  # Нечётные индексы - правый канал
+                        combined_samples = np.maximum(np.abs(left_channel), np.abs(right_channel))
+                    else:
+                        combined_samples = np.abs(samples)
 
-                # Для стерео разделяем каналы и находим максимальное значение в обоих каналах
-                if audio.channels == 2:
-                    left_channel = samples[::2]  # Чётные индексы - левый канал
-                    right_channel = samples[1::2]  # Нечётные индексы - правый канал
-                    combined_samples = np.maximum(np.abs(left_channel), np.abs(right_channel))
-                else:
-                    combined_samples = np.abs(samples)
+                    # Находим абсолютное значение всех сэмплов для поиска пика
+                    peak_value = np.max(combined_samples)
+                    peak_index = np.argmax(combined_samples)
 
-                # Находим абсолютное значение всех сэмплов для поиска пика
-                peak_value = np.max(combined_samples)
-                peak_index = np.argmax(combined_samples)
+                    # Расчёт времени, когда произошёл пик
+                    duration_seconds = len(audio) / 1000.0  # Длительность трека в секундах
+                    sample_rate = audio.frame_rate
 
-                # Расчёт времени, когда произошёл пик
-                duration_seconds = len(audio) / 1000.0  # Длительность трека в секундах
-                sample_rate = audio.frame_rate
+                    # Перевод индекса пикового сэмпла во время (секунды)
+                    peak_time = peak_index / sample_rate
 
-                # Перевод индекса пикового сэмпла во время (секунды)
-                peak_time = peak_index / sample_rate
+                    # Проверка, что рассчитанное время пика не выходит за пределы длительности трека
+                    if peak_time > duration_seconds:
+                        peak_time = duration_seconds
 
-                # Проверка, что рассчитанное время пика не выходит за пределы длительности трека
-                if peak_time > duration_seconds:
-                    peak_time = duration_seconds
+                    # Преобразуем значение пика в дБ
+                    peak_db = 20 * np.log10(peak_value / (2**(audio.sample_width * 8 - 1)))
 
-                # Преобразуем значение пика в дБ
-                peak_db = 20 * np.log10(peak_value / (2**(audio.sample_width * 8 - 1)))
+                    # Добавляем результаты в текстовое поле
+                    self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
+                    self.result_text.insert(END, f"Max Peak: {peak_db:.2f} dB at {peak_time:.2f} seconds\n")
+                    self.result_text.insert(END, "\n")
 
-                # Добавляем результаты в текстовое поле
-                self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
-                self.result_text.insert(END, f"Max Peak: {peak_db:.2f} dB at {peak_time:.2f} seconds\n")
-                self.result_text.insert(END, "\n")
+                except Exception as e:
+                    self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
+                    self.result_text.insert(END, f"Ошибка: {str(e)}\n\n")
 
-            except Exception as e:
-                self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
-                self.result_text.insert(END, f"Ошибка: {str(e)}\n\n")
+        finally:
+            self.master.after(0, self.progress.stop)
 
-        # Останавливаем прогресс-бар по завершению анализа
-        self.progress.stop()
 
     def copy_selected_text(self):
         # Копируем выделенный текст в буфер обмена
