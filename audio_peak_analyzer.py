@@ -71,7 +71,7 @@ class AudioPeakAnalyzer:
                 return  # Если файлы не выбраны, выходим
 
             # Очищаем текстовое поле с результатами
-            self.result_text.delete(1.0, END)
+            result_entries = []
             
             # Проходим по каждому выбранному файлу и выполняем анализ
             for file_path in file_paths:
@@ -106,18 +106,23 @@ class AudioPeakAnalyzer:
                     # Преобразуем значение пика в дБ
                     peak_db = 20 * np.log10(peak_value / (2**(audio.sample_width * 8 - 1)))
 
-                    # Добавляем результаты в текстовое поле
-                    self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
-                    self.result_text.insert(END, f"Max Peak: {peak_db:.2f} dB at {peak_time:.2f} seconds\n")
-                    self.result_text.insert(END, "\n")
+                    # Добавляем результаты в список
+                    result_entries.append(f"File: {os.path.basename(file_path)}\n")
+                    result_entries.append(f"Max Peak: {peak_db:.2f} dB at {peak_time:.2f} seconds\n\n")
 
                 except Exception as e:
-                    self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
-                    self.result_text.insert(END, f"Ошибка: {str(e)}\n\n")
+                    result_entries.append(f"File: {os.path.basename(file_path)}\n")
+                    result_entries.append(f"Ошибка: {str(e)}\n\n")
+
+            # Обновление текстового поля из основного потока
+            self.master.after(0, lambda: self.update_result_text(result_entries))
 
         finally:
             self.master.after(0, self.progress.stop)
 
+    def update_result_text(self, results):
+        for line in results:
+            self.result_text.insert(END, line)
 
     def copy_selected_text(self):
         # Копируем выделенный текст в буфер обмена
