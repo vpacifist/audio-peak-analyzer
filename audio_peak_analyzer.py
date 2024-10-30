@@ -15,7 +15,8 @@ os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 
 # Проверка работы ffmpeg
 try:
-    ffmpeg.input('test.mp3').output('test_output.wav').run()
+    # Проверка работы ffmpeg - просто проверяем версию без использования реального файла
+    ffmpeg.probe(ffmpeg_path)
 except ffmpeg.Error as e:
     print('FFmpeg error:', e)
 
@@ -36,6 +37,9 @@ class AudioPeakAnalyzer:
         self.scrollbar = Scrollbar(master, command=self.result_text.yview)
         self.scrollbar.pack(side=RIGHT, fill=Y)
         self.result_text.config(yscrollcommand=self.scrollbar.set)
+
+         # Привязываем сочетание клавиш Ctrl+C к методу copy_selected_text
+        master.bind('<Control-c>', self.copy_selected_text)
 
     def analyze(self):
         # Открываем диалоговое окно для выбора нескольких файлов
