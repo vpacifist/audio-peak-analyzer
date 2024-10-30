@@ -1,8 +1,10 @@
 import os
-from tkinter import Tk, filedialog, Label, Button, Text, Scrollbar, RIGHT, Y, END
+from tkinter import Tk, filedialog, Label, Button, Text, Scrollbar, RIGHT, Y, END, ttk
 from pydub import AudioSegment
 import numpy as np
 import subprocess
+import threading
+import time
 
 # Устанавливаем путь к ffmpeg
 ffmpeg_path = r"C:\Program Files\ffmpeg-7.1-essentials_build\bin\ffmpeg.exe"
@@ -30,7 +32,7 @@ class AudioPeakAnalyzer:
         self.label = Label(master, text="Выберите аудиофайлы для анализа.")
         self.label.pack()
 
-        self.analyze_button = Button(master, text="Анализировать", command=self.analyze)
+        self.analyze_button = Button(master, text="Анализировать", command=self.start_analysis)
         self.analyze_button.pack()
 
         self.result_text = Text(master, wrap='word', height=15, width=60)
@@ -44,16 +46,20 @@ class AudioPeakAnalyzer:
         self.copy_button = Button(master, text="Копировать выделенный текст", command=self.copy_selected_text)
         self.copy_button.pack()
 
-    def copy_selected_text(self):
-        # Копируем выделенный текст в буфер обмена
-        try:
-            selected_text = self.result_text.get("sel.first", "sel.last")
-            self.master.clipboard_clear()
-            self.master.clipboard_append(selected_text)
-            self.master.update()  # Чтобы содержимое буфера обновилось
-            print(f"Текст скопирован: {selected_text}", flush=True)  # Отладочный вывод для проверки
-        except Exception as e:
-            print(f"Ошибка копирования: {e}", flush=True)  # Отладочный вывод в случае ошибки
+        # Создаём прогресс-бар
+        self.progress = ttk.Progressbar(master, mode='indeterminate')
+        self.progress.pack(pady=10)
+
+    def start_analysis(self):
+        # Очищаем текстовое поле с результатами перед началом анализа
+        self.result_text.delete(1.0, END)
+
+        # Запускаем прогресс-бар
+        self.progress.start(10)  # Скорость "мигания" прогресс-бара
+
+        # Запускаем анализ в отдельном потоке
+        analysis_thread = threading.Thread(target=self.analyze)
+        analysis_thread.start()
 
     def analyze(self):
         print("Функция analyze() запущена", flush=True)
@@ -62,6 +68,8 @@ class AudioPeakAnalyzer:
         file_paths = filedialog.askopenfilenames(filetypes=[("Audio Files", "*.mp3 *.wav *.flac *.ogg")])
 
         if not file_paths:
+            # Останавливаем прогресс-бар, если файлы не были выбраны
+            self.progress.stop()
             return  # Если файлы не выбраны, выходим
 
         # Очищаем текстовое поле с результатами
@@ -108,6 +116,20 @@ class AudioPeakAnalyzer:
             except Exception as e:
                 self.result_text.insert(END, f"File: {os.path.basename(file_path)}\n")
                 self.result_text.insert(END, f"Ошибка: {str(e)}\n\n")
+
+        # Останавливаем прогресс-бар по завершению анализа
+        self.progress.stop()
+
+    def copy_selected_text(self):
+        # Копируем выделенный текст в буфер обмена
+        try:
+            selected_text = self.result_text.get("sel.first", "sel.last")
+            self.master.clipboard_clear()
+            self.master.clipboard_append(selected_text)
+            self.master.update()  # Чтобы содержимое буфера обновилось
+            print(f"Текст скопирован: {selected_text}", flush=True)  # Отладочный вывод для проверки
+        except Exception as e:
+            print(f"Ошибка копирования: {e}", flush=True)  # Отладочный вывод в случае ошибки
 
 # Запуск интерфейса
 root = Tk()
