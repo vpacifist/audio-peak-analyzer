@@ -21,7 +21,7 @@ except subprocess.CalledProcessError as e:
     print('FFmpeg error:', e)
 except FileNotFoundError:
     print('FFmpeg executable not found. Please check the path:', ffmpeg_path)
-
+    
 class AudioPeakAnalyzer:
     def __init__(self, master):
         self.master = master
