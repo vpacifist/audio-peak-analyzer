@@ -21,7 +21,7 @@ except subprocess.CalledProcessError as e:
     print('FFmpeg error:', e)
 except FileNotFoundError:
     print('FFmpeg executable not found. Please check the path:', ffmpeg_path)
-    
+
 class AudioPeakAnalyzer:
     def __init__(self, master):
         self.master = master
@@ -40,8 +40,9 @@ class AudioPeakAnalyzer:
         self.scrollbar.pack(side=RIGHT, fill=Y)
         self.result_text.config(yscrollcommand=self.scrollbar.set)
 
-         # Привязываем сочетание клавиш Ctrl+C к методу copy_selected_text
-        master.bind('<Control-c>', lambda event: self.copy_selected_text())
+        # Добавляем кнопку для копирования выделенного текста
+        self.copy_button = Button(master, text="Копировать выделенный текст", command=self.copy_selected_text)
+        self.copy_button.pack()
 
     def copy_selected_text(self):
         # Копируем выделенный текст в буфер обмена
@@ -50,10 +51,13 @@ class AudioPeakAnalyzer:
             self.master.clipboard_clear()
             self.master.clipboard_append(selected_text)
             self.master.update()  # Чтобы содержимое буфера обновилось
-        except:
-            pass  # Ничего не делаем, если нет выделенного текста
+            print(f"Текст скопирован: {selected_text}", flush=True)  # Отладочный вывод для проверки
+        except Exception as e:
+            print(f"Ошибка копирования: {e}", flush=True)  # Отладочный вывод в случае ошибки
 
     def analyze(self):
+        print("Функция analyze() запущена", flush=True)
+
         # Открываем диалоговое окно для выбора нескольких файлов
         file_paths = filedialog.askopenfilenames(filetypes=[("Audio Files", "*.mp3 *.wav *.flac *.ogg")])
 
