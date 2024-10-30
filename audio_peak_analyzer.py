@@ -2,7 +2,7 @@ import os
 from tkinter import Tk, filedialog, Label, Button, Text, Scrollbar, RIGHT, Y, END
 from pydub import AudioSegment
 import numpy as np
-import ffmpeg
+import subprocess
 
 # Устанавливаем путь к ffmpeg
 ffmpeg_path = r"C:\Program Files\ffmpeg-7.1-essentials_build\bin\ffmpeg.exe"
@@ -15,11 +15,13 @@ os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 
 # Проверка работы ffmpeg
 try:
-    # Проверка работы ffmpeg - просто проверяем версию без использования реального файла
-    ffmpeg.probe(ffmpeg_path)
-except ffmpeg.Error as e:
+    # Проверяем версию ffmpeg, чтобы убедиться, что он доступен
+    subprocess.run([ffmpeg_path, "-version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+except subprocess.CalledProcessError as e:
     print('FFmpeg error:', e)
-
+except FileNotFoundError:
+    print('FFmpeg executable not found. Please check the path:', ffmpeg_path)
+    
 class AudioPeakAnalyzer:
     def __init__(self, master):
         self.master = master
@@ -39,7 +41,17 @@ class AudioPeakAnalyzer:
         self.result_text.config(yscrollcommand=self.scrollbar.set)
 
          # Привязываем сочетание клавиш Ctrl+C к методу copy_selected_text
-        master.bind('<Control-c>', self.copy_selected_text)
+        master.bind('<Control-c>', lambda event: self.copy_selected_text())
+
+    def copy_selected_text(self):
+        # Копируем выделенный текст в буфер обмена
+        try:
+            selected_text = self.result_text.get("sel.first", "sel.last")
+            self.master.clipboard_clear()
+            self.master.clipboard_append(selected_text)
+            self.master.update()  # Чтобы содержимое буфера обновилось
+        except:
+            pass  # Ничего не делаем, если нет выделенного текста
 
     def analyze(self):
         # Открываем диалоговое окно для выбора нескольких файлов
